@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, View, Text, ScrollView, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,11 +10,13 @@ import { BookSpine } from '@/src/components/bookshelf/BookSpine';
 import { NewBookButton } from '@/src/components/bookshelf/NewBookButton';
 import type { Book } from '@/src/db/types';
 
+// Module-level flag so auto-open only fires once per app session
+let hasAutoOpened = false;
+
 export default function BookshelfScreen() {
   const { books, loading, refresh, remove, getLastOpenBookId, setLastOpenBookId } =
     useBooks();
   const router = useRouter();
-  const [checkedAutoOpen, setCheckedAutoOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -22,11 +24,11 @@ export default function BookshelfScreen() {
     }, [refresh])
   );
 
-  // Auto-open last book on first mount
+  // Auto-open last book only on initial app launch
   useFocusEffect(
     useCallback(() => {
-      if (checkedAutoOpen || loading) return;
-      setCheckedAutoOpen(true);
+      if (hasAutoOpened || loading) return;
+      hasAutoOpened = true;
 
       const checkLastBook = async () => {
         const lastBookId = await getLastOpenBookId();
@@ -35,7 +37,7 @@ export default function BookshelfScreen() {
         }
       };
       checkLastBook();
-    }, [checkedAutoOpen, loading, getLastOpenBookId, router])
+    }, [loading, getLastOpenBookId, router])
   );
 
   const handleBookPress = async (book: Book) => {
@@ -77,7 +79,7 @@ export default function BookshelfScreen() {
     router.push('/new-book');
   };
 
-  if (loading && !checkedAutoOpen) {
+  if (loading && !hasAutoOpened) {
     return <View style={styles.container} />;
   }
 

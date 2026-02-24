@@ -132,6 +132,90 @@ export async function setLastOpenBookId(
   );
 }
 
+export async function getRawBookCategories(
+  db: SQLiteDatabase,
+  bookId: number
+): Promise<BookCategory[]> {
+  return db.getAllAsync<BookCategory>(
+    'SELECT * FROM book_categories WHERE book_id = ? ORDER BY type, sort_order',
+    [bookId]
+  );
+}
+
+export async function addBookCategory(
+  db: SQLiteDatabase,
+  bookId: number,
+  category: { label: string; icon: string; color: string; type: 'expense' | 'income' }
+): Promise<string> {
+  const slug = category.label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const categoryId = `${slug}-${Date.now()}`;
+
+  const maxOrder = await db.getFirstAsync<{ max_order: number | null }>(
+    'SELECT MAX(sort_order) as max_order FROM book_categories WHERE book_id = ? AND type = ?',
+    [bookId, category.type]
+  );
+  const sortOrder = (maxOrder?.max_order ?? -1) + 1;
+
+  await db.runAsync(
+    'INSERT INTO book_categories (book_id, category_id, label, icon, color, type, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [bookId, categoryId, category.label, category.icon, category.color, category.type, sortOrder]
+  );
+
+  return categoryId;
+}
+
+export async function updateBookCategory(
+  db: SQLiteDatabase,
+  bookCategoryId: number,
+  updates: { label?: string; icon?: string; color?: string }
+): Promise<void> {
+  const sets: string[] = [];
+  const values: any[] = [];
+
+  if (updates.label !== undefined) {
+    sets.push('label = ?');
+    values.push(updates.label);
+  }
+  if (updates.icon !== undefined) {
+    sets.push('icon = ?');
+    values.push(updates.icon);
+  }
+  if (updates.color !== undefined) {
+    sets.push('color = ?');
+    values.push(updates.color);
+  }
+
+  if (sets.length === 0) return;
+
+  values.push(bookCategoryId);
+  await db.runAsync(
+    `UPDATE book_categories SET ${sets.join(', ')} WHERE id = ?`,
+    values
+  );
+}
+
+export async function deleteBookCategory(
+  db: SQLiteDatabase,
+  bookCategoryId: number
+): Promise<void> {
+  await db.runAsync('DELETE FROM book_categories WHERE id = ?', [bookCategoryId]);
+}
+
+export async function getCategoryUsageCount(
+  db: SQLiteDatabase,
+  bookId: number,
+  categoryId: string
+): Promise<number> {
+  const result = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM transactions WHERE book_id = ? AND category = ?',
+    [bookId, categoryId]
+  );
+  return result?.count ?? 0;
+}
+
 export async function createBookFromTemplate(
   db: SQLiteDatabase,
   name: string,

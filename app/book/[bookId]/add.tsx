@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -13,17 +13,19 @@ export default function AddScreen() {
   const { create } = useTransactions();
   const router = useRouter();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
+  const [formKey, setFormKey] = useState(0);
 
   const handleSubmit = async (transaction: NewTransaction) => {
     await create(transaction);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setFormKey((k) => k + 1);
     router.navigate(`/book/${bookId}`);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.header}>New Entry</Text>
-      <TransactionForm onSubmit={handleSubmit} submitLabel="Record Entry" />
+      <TransactionForm key={formKey} onSubmit={handleSubmit} submitLabel="Record Entry" />
     </SafeAreaView>
   );
 }

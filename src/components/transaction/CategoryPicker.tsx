@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
 import { useBook } from '@/src/context/BookContext';
+import { CategoryFormModal } from '@/src/components/category/CategoryFormModal';
 import type { CategoryType } from '@/src/constants/categories';
 
 interface Props {
@@ -14,8 +15,15 @@ interface Props {
 }
 
 export function CategoryPicker({ type, selected, onSelect }: Props) {
-  const { getCategoriesByType } = useBook();
+  const { getCategoriesByType, addCategory } = useBook();
   const categories = getCategoriesByType(type);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const handleAddCategory = async (label: string, icon: string, color: string) => {
+    const newId = await addCategory(label, icon, color, type);
+    setShowAddModal(false);
+    onSelect(newId);
+  };
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
@@ -65,7 +73,22 @@ export function CategoryPicker({ type, selected, onSelect }: Props) {
             </Text>
           </Pressable>
         ))}
+        <Pressable
+          style={[styles.item, styles.addItem]}
+          onPress={() => setShowAddModal(true)}
+        >
+          <View style={[styles.iconWrap, { backgroundColor: Colors.surfaceLight }]}>
+            <FontAwesome name="plus" size={18} color={Colors.textSecondary} />
+          </View>
+          <Text style={styles.itemText}>Add New</Text>
+        </Pressable>
       </View>
+      <CategoryFormModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddCategory}
+        type={type}
+      />
     </Animated.View>
   );
 }
@@ -94,6 +117,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  addItem: {
+    borderStyle: 'dashed',
   },
   iconWrap: {
     width: 40,

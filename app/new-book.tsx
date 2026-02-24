@@ -14,7 +14,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
-import { HOBBY_TEMPLATES, type HobbyTemplate } from '@/src/constants/categories';
+import { HOBBY_TEMPLATES, BLANK_CATEGORIES, type HobbyTemplate } from '@/src/constants/categories';
 import { useBooks } from '@/src/hooks/useBooks';
 import { GradientButton } from '@/src/components/ui/GradientButton';
 
@@ -22,7 +22,7 @@ export default function NewBookScreen() {
   const router = useRouter();
   const { createFromTemplate, setLastOpenBookId } = useBooks();
   const [name, setName] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<HobbyTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<HobbyTemplate | 'blank'>('blank');
 
   const handleTemplatePress = (template: HobbyTemplate) => {
     setSelectedTemplate(template);
@@ -33,7 +33,7 @@ export default function NewBookScreen() {
   };
 
   const handleBlankPress = () => {
-    setSelectedTemplate(null);
+    setSelectedTemplate('blank');
     Haptics.selectionAsync();
   };
 
@@ -43,11 +43,11 @@ export default function NewBookScreen() {
       return;
     }
 
-    const template = selectedTemplate;
-    const categories = template?.categories ?? [];
-    const icon = template?.icon ?? 'book';
-    const color = template?.color ?? '#8B4513';
-    const templateKey = template?.key ?? null;
+    const isBlank = selectedTemplate === 'blank';
+    const categories = isBlank ? BLANK_CATEGORIES : selectedTemplate.categories;
+    const icon = isBlank ? 'book' : selectedTemplate.icon;
+    const color = isBlank ? '#8B4513' : selectedTemplate.color;
+    const templateKey = isBlank ? null : selectedTemplate.key;
 
     const bookId = await createFromTemplate(
       name.trim(),
@@ -96,11 +96,13 @@ export default function NewBookScreen() {
           </Text>
 
           <View style={styles.templateGrid}>
-            {/* Blank option */}
             <Pressable
               style={[
                 styles.templateItem,
-                !selectedTemplate && styles.templateItemSelected,
+                selectedTemplate === 'blank' && {
+                  borderColor: '#8B4513',
+                  backgroundColor: '#8B451308',
+                },
               ]}
               onPress={handleBlankPress}
             >
@@ -108,7 +110,7 @@ export default function NewBookScreen() {
                 style={[
                   styles.templateIcon,
                   {
-                    backgroundColor: !selectedTemplate
+                    backgroundColor: selectedTemplate === 'blank'
                       ? '#8B451320'
                       : Colors.surfaceLight,
                   },
@@ -117,21 +119,21 @@ export default function NewBookScreen() {
                 <FontAwesome
                   name="book"
                   size={22}
-                  color={!selectedTemplate ? '#8B4513' : Colors.textSecondary}
+                  color={selectedTemplate === 'blank' ? '#8B4513' : Colors.textSecondary}
                 />
               </View>
               <Text
                 style={[
                   styles.templateName,
-                  !selectedTemplate && styles.templateNameSelected,
+                  selectedTemplate === 'blank' && styles.templateNameSelected,
                 ]}
               >
-                Blank
+                General
               </Text>
             </Pressable>
 
             {HOBBY_TEMPLATES.map((template) => {
-              const isSelected = selectedTemplate?.key === template.key;
+              const isSelected = selectedTemplate !== 'blank' && selectedTemplate.key === template.key;
               return (
                 <Pressable
                   key={template.key}
@@ -180,7 +182,7 @@ export default function NewBookScreen() {
             title="Create Book"
             onPress={handleCreate}
             colors={
-              selectedTemplate
+              selectedTemplate !== 'blank'
                 ? [selectedTemplate.color, selectedTemplate.color]
                 : ['#8B4513', '#8B4513']
             }
@@ -261,10 +263,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  templateItemSelected: {
-    borderColor: '#8B4513',
-    backgroundColor: '#8B451308',
   },
   templateIcon: {
     width: 44,

@@ -56,23 +56,32 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Pressable style={styles.headerRow} onPress={handleBookPress}>
-        <FontAwesome
-          name={book.icon as any}
-          size={20}
-          color={book.color}
-          style={styles.headerIcon}
-        />
-        <Text style={styles.header} numberOfLines={1}>
-          {book.name}
-        </Text>
-        <FontAwesome
-          name="chevron-down"
-          size={14}
-          color={Colors.textSecondary}
-          style={styles.chevron}
-        />
-      </Pressable>
+      <View style={styles.headerRow}>
+        <Pressable style={styles.headerLeft} onPress={handleBookPress}>
+          <FontAwesome
+            name={book.icon as any}
+            size={20}
+            color={book.color}
+            style={styles.headerIcon}
+          />
+          <Text style={styles.header} numberOfLines={1}>
+            {book.name}
+          </Text>
+          <FontAwesome
+            name="chevron-down"
+            size={14}
+            color={Colors.textSecondary}
+            style={styles.chevron}
+          />
+        </Pressable>
+        <Pressable
+          onPress={() => router.push(`/book/${book.id}/categories`)}
+          style={styles.settingsButton}
+          hitSlop={12}
+        >
+          <FontAwesome name="cog" size={18} color={Colors.textSecondary} />
+        </Pressable>
+      </View>
       <TransactionList
         transactions={transactions}
         onTransactionPress={handleTransactionPress}
@@ -91,9 +100,15 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   headerIcon: {
     marginRight: 10,
@@ -104,6 +119,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chevron: {
+    marginLeft: 8,
+  },
+  settingsButton: {
+    padding: 8,
     marginLeft: 8,
   },
   sectionTitle: {

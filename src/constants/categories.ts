@@ -177,6 +177,21 @@ export const HOBBY_TEMPLATES: HobbyTemplate[] = [
   },
 ];
 
+export const BLANK_CATEGORIES: Category[] = [
+  { id: 'equipment', label: 'Equipment', icon: 'wrench', color: '#8B4513', type: 'expense' },
+  { id: 'supplies', label: 'Supplies', icon: 'shopping-basket', color: '#A0522D', type: 'expense' },
+  { id: 'software', label: 'Software', icon: 'laptop', color: '#2E5A88', type: 'expense' },
+  { id: 'education', label: 'Education', icon: 'graduation-cap', color: '#4A7C59', type: 'expense' },
+  { id: 'travel', label: 'Travel', icon: 'plane', color: '#4A766E', type: 'expense' },
+  { id: 'subscriptions', label: 'Subscriptions', icon: 'refresh', color: '#6B4E71', type: 'expense' },
+  { id: 'other-expense', label: 'Other', icon: 'tag', color: '#696156', type: 'expense' },
+  { id: 'sales', label: 'Sales', icon: 'shopping-cart', color: '#1A1A1A', type: 'income' },
+  { id: 'services', label: 'Services', icon: 'users', color: '#2C4A2C', type: 'income' },
+  { id: 'commissions', label: 'Commissions', icon: 'briefcase', color: '#8B7D37', type: 'income' },
+  { id: 'teaching', label: 'Teaching', icon: 'group', color: '#2E5A88', type: 'income' },
+  { id: 'other-income', label: 'Other', icon: 'tag', color: '#696156', type: 'income' },
+];
+
 export function getTemplateByKey(key: string): HobbyTemplate | undefined {
   return HOBBY_TEMPLATES.find((t) => t.key === key);
 }

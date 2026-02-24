@@ -61,6 +61,12 @@ export default function BookLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="categories"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
     </BookProvider>
   );

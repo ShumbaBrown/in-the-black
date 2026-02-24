@@ -5,19 +5,20 @@ import {
   Text,
   TextInput,
   Pressable,
-  Platform,
   KeyboardAvoidingView,
   ScrollView,
   Alert,
+  Keyboard,
+  Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { LedgerDatePicker } from '@/src/components/ui/LedgerDatePicker';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
 import { SegmentedToggle } from '@/src/components/ui/SegmentedToggle';
 import { CategoryPicker } from './CategoryPicker';
 import { GradientButton } from '@/src/components/ui/GradientButton';
-import { toDateString, formatDate } from '@/src/utils/dates';
+import { toDateString } from '@/src/utils/dates';
 import type { NewTransaction } from '@/src/db/types';
 
 interface Props {
@@ -46,8 +47,6 @@ export function TransactionForm({
   const [date, setDate] = useState(
     initialValues?.date ? new Date(initialValues.date + 'T00:00:00') : new Date()
   );
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
   const typeIndex = type === 'expense' ? 0 : 1;
   const accentColor = type === 'expense' ? Colors.inkRed : Colors.inkBlack;
   const buttonColors = type === 'expense'
@@ -113,7 +112,9 @@ export function TransactionForm({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScrollBeginDrag={Keyboard.dismiss}
       >
+        <Pressable onPress={Keyboard.dismiss}>
         <SegmentedToggle
           options={['Expense', 'Income']}
           selected={typeIndex}
@@ -122,13 +123,12 @@ export function TransactionForm({
         />
 
         <View style={styles.amountContainer}>
-          <Text style={[styles.currencySymbol, { color: accentColor }]}>$</Text>
           <TextInput
             style={[styles.amountInput, { color: accentColor, borderBottomColor: accentColor }]}
-            value={amount}
-            onChangeText={setAmount}
+            value={amount ? `$${amount}` : ''}
+            onChangeText={(text) => setAmount(text.replace(/[^0-9.]/g, ''))}
             keyboardType="decimal-pad"
-            placeholder="0.00"
+            placeholder="$0.00"
             placeholderTextColor={Colors.textMuted}
           />
         </View>
@@ -149,25 +149,11 @@ export function TransactionForm({
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>DATE</Text>
-          <Pressable
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateText}>{formatDate(toDateString(date))}</Text>
-          </Pressable>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              onChange={(_, selectedDate) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) setDate(selectedDate);
-              }}
-              themeVariant="light"
-              maximumDate={new Date()}
-            />
-          )}
+          <LedgerDatePicker
+            value={date}
+            onChange={setDate}
+            maximumDate={new Date()}
+          />
         </View>
 
         <View style={styles.actions}>
@@ -182,6 +168,7 @@ export function TransactionForm({
             </Pressable>
           )}
         </View>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -196,21 +183,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   amountContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 32,
     marginBottom: 24,
-  },
-  currencySymbol: {
-    fontSize: 36,
-    fontFamily: 'SpaceMono',
-    marginRight: 4,
   },
   amountInput: {
     fontSize: 48,
     fontFamily: 'SpaceMono',
-    minWidth: 120,
+    width: '100%',
     textAlign: 'center',
     letterSpacing: -1,
     borderBottomWidth: 1,
@@ -236,19 +216,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderBottomWidth: 2,
     borderBottomColor: Colors.borderHeavy,
-  },
-  dateButton: {
-    backgroundColor: Colors.surface,
-    borderRadius: 2,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.borderHeavy,
-  },
-  dateText: {
-    ...Typography.body,
-    color: Colors.textPrimary,
   },
   actions: {
     marginTop: 32,
