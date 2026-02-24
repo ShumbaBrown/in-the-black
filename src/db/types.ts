@@ -6,6 +6,7 @@ export interface Transaction {
   category: string;
   date: string;
   book_id: number;
+  server_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,7 @@ export interface Book {
   hobby_template: string | null;
   icon: string;
   color: string;
+  server_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,7 @@ export interface BookCategory {
   color: string;
   type: 'expense' | 'income';
   sort_order: number;
+  server_id: string | null;
 }
 
 export interface DashboardData {

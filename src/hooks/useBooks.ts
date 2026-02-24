@@ -3,9 +3,12 @@ import { useSQLiteContext } from 'expo-sqlite';
 import type { Book } from '../db/types';
 import type { Category } from '../constants/categories';
 import * as booksDb from '../db/books';
+import { useAuth } from '../context/AuthContext';
+import * as sync from '../services/syncService';
 
 export function useBooks() {
   const db = useSQLiteContext();
+  const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,17 +44,41 @@ export function useBooks() {
         color
       );
       await refresh();
+
+      // Sync: push book + its categories
+      if (user) {
+        sync.pushBook(db, user.id, id).catch((e) =>
+          console.warn('Sync pushBook failed:', e)
+        );
+        const cats = await booksDb.getRawBookCategories(db, id);
+        for (const cat of cats) {
+          sync.pushCategory(db, user.id, cat.id).catch((e) =>
+            console.warn('Sync pushCategory failed:', e)
+          );
+        }
+      }
+
       return id;
     },
-    [db, refresh]
+    [db, refresh, user]
   );
 
   const remove = useCallback(
     async (id: number) => {
+      // Grab server_id before local delete
+      const book = await booksDb.getBookById(db, id);
+      const serverId = book?.server_id ?? null;
+
       await booksDb.deleteBook(db, id);
       await refresh();
+
+      if (user && serverId) {
+        sync.pushDeleteBook(serverId).catch((e) =>
+          console.warn('Sync pushDeleteBook failed:', e)
+        );
+      }
     },
-    [db, refresh]
+    [db, refresh, user]
   );
 
   const getLastOpenBookId = useCallback(async () => {
@@ -61,8 +88,17 @@ export function useBooks() {
   const setLastOpenBookId = useCallback(
     async (bookId: number) => {
       await booksDb.setLastOpenBookId(db, bookId);
+
+      if (user) {
+        const book = await booksDb.getBookById(db, bookId);
+        if (book?.server_id) {
+          sync.pushSettings(user.id, 'last_open_book_id', book.server_id).catch(
+            (e) => console.warn('Sync pushSettings failed:', e)
+          );
+        }
+      }
     },
-    [db]
+    [db, user]
   );
 
   return {

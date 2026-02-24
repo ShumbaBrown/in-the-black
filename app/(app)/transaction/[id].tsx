@@ -11,20 +11,38 @@ import { TransactionForm } from '@/src/components/transaction/TransactionForm';
 import { BookProvider } from '@/src/context/BookContext';
 import { getTransactionById, updateTransaction, deleteTransaction } from '@/src/db/transactions';
 import type { Transaction, NewTransaction } from '@/src/db/types';
+import { useAuth } from '@/src/context/AuthContext';
+import * as sync from '@/src/services/syncService';
 
 function EditTransactionContent({ transaction }: { transaction: Transaction }) {
   const router = useRouter();
   const db = useSQLiteContext();
+  const { user } = useAuth();
 
   const handleSubmit = async (values: NewTransaction) => {
     await updateTransaction(db, transaction.id, values);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (user) {
+      sync.pushTransaction(db, user.id, transaction.id).catch((e) =>
+        console.warn('Sync pushTransaction failed:', e)
+      );
+    }
+
     router.back();
   };
 
   const handleDelete = async () => {
+    const serverId = transaction.server_id;
     await deleteTransaction(db, transaction.id);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+    if (user && serverId) {
+      sync.pushDeleteTransaction(serverId).catch((e) =>
+        console.warn('Sync pushDeleteTransaction failed:', e)
+      );
+    }
+
     router.back();
   };
 

@@ -10,6 +10,8 @@ import {
 } from '../db/books';
 import type { Book, BookCategory } from '../db/types';
 import type { Category, CategoryType } from '../constants/categories';
+import { useAuth } from './AuthContext';
+import * as sync from '../services/syncService';
 
 interface BookContextValue {
   book: Book;
@@ -33,6 +35,7 @@ interface BookProviderProps {
 
 export function BookProvider({ bookId, children }: BookProviderProps) {
   const db = useSQLiteContext();
+  const { user } = useAuth();
   const [book, setBook] = useState<Book | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [rawCategories, setRawCategories] = useState<BookCategory[]>([]);
@@ -76,25 +79,56 @@ export function BookProvider({ bookId, children }: BookProviderProps) {
     async (label: string, icon: string, color: string, type: CategoryType): Promise<string> => {
       const categoryId = await addBookCategory(db, bookId, { label, icon, color, type });
       await refreshCategories();
+
+      // Sync: find the newly inserted row and push it
+      if (user) {
+        const raw = await getRawBookCategories(db, bookId);
+        const newCat = raw.find((c) => c.category_id === categoryId);
+        if (newCat) {
+          sync.pushCategory(db, user.id, newCat.id).catch((e) =>
+            console.warn('Sync pushCategory failed:', e)
+          );
+        }
+      }
+
       return categoryId;
     },
-    [db, bookId, refreshCategories]
+    [db, bookId, refreshCategories, user]
   );
 
   const updateCategoryFn = useCallback(
     async (bookCategoryId: number, updates: { label?: string; icon?: string; color?: string }) => {
       await updateBookCategory(db, bookCategoryId, updates);
       await refreshCategories();
+
+      if (user) {
+        sync.pushCategory(db, user.id, bookCategoryId).catch((e) =>
+          console.warn('Sync pushCategory failed:', e)
+        );
+      }
     },
-    [db, refreshCategories]
+    [db, refreshCategories, user]
   );
 
   const deleteCategoryFn = useCallback(
     async (bookCategoryId: number) => {
+      // Grab server_id before local delete
+      const cat = await db.getFirstAsync<{ server_id: string | null }>(
+        'SELECT server_id FROM book_categories WHERE id = ?',
+        [bookCategoryId]
+      );
+      const serverId = cat?.server_id ?? null;
+
       await deleteBookCategory(db, bookCategoryId);
       await refreshCategories();
+
+      if (user && serverId) {
+        sync.pushDeleteCategory(serverId).catch((e) =>
+          console.warn('Sync pushDeleteCategory failed:', e)
+        );
+      }
     },
-    [db, refreshCategories]
+    [db, refreshCategories, user]
   );
 
   if (loading || !book) {

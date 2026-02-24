@@ -13,11 +13,14 @@ import { NetPositionHero } from '@/src/components/dashboard/NetPositionHero';
 import { SummaryCards } from '@/src/components/dashboard/SummaryCards';
 import { FilterChips, type FilterOption } from '@/src/components/dashboard/FilterChips';
 import { TransactionList } from '@/src/components/dashboard/TransactionList';
-import { deleteTransaction } from '@/src/db/transactions';
+import { deleteTransaction, getTransactionById } from '@/src/db/transactions';
 import type { Transaction } from '@/src/db/types';
+import { useAuth } from '@/src/context/AuthContext';
+import * as sync from '@/src/services/syncService';
 
 export default function DashboardScreen() {
   const { book } = useBook();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<FilterOption>('all');
   const dbFilter = filter === 'all' ? undefined : filter;
   const { totalIncome, totalExpenses, netPosition, transactions, loading, refresh } =
@@ -36,9 +39,16 @@ export default function DashboardScreen() {
   };
 
   const handleTransactionDelete = async (transaction: Transaction) => {
+    const serverId = transaction.server_id;
     await deleteTransaction(db, transaction.id);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     refresh();
+
+    if (user && serverId) {
+      sync.pushDeleteTransaction(serverId).catch((e) =>
+        console.warn('Sync pushDeleteTransaction failed:', e)
+      );
+    }
   };
 
   const handleBookPress = () => {

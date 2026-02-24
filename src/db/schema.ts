@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 
 async function getSchemaVersion(db: SQLiteDatabase): Promise<number> {
   await db.execAsync(`
@@ -143,6 +143,29 @@ async function migrateV2(db: SQLiteDatabase): Promise<void> {
   }
 }
 
+async function migrateV3(db: SQLiteDatabase): Promise<void> {
+  // Add server_id columns for Supabase sync mapping
+  // SQLite doesn't support UNIQUE in ALTER TABLE ADD COLUMN, so we add the column
+  // first, then create a unique index separately.
+  const bookCols = await db.getAllAsync<{ name: string }>("PRAGMA table_info(books)");
+  if (!bookCols.some((c) => c.name === 'server_id')) {
+    await db.execAsync('ALTER TABLE books ADD COLUMN server_id TEXT');
+  }
+  await db.execAsync('CREATE UNIQUE INDEX IF NOT EXISTS idx_books_server_id ON books(server_id)');
+
+  const txCols = await db.getAllAsync<{ name: string }>("PRAGMA table_info(transactions)");
+  if (!txCols.some((c) => c.name === 'server_id')) {
+    await db.execAsync('ALTER TABLE transactions ADD COLUMN server_id TEXT');
+  }
+  await db.execAsync('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_server_id ON transactions(server_id)');
+
+  const catCols = await db.getAllAsync<{ name: string }>("PRAGMA table_info(book_categories)");
+  if (!catCols.some((c) => c.name === 'server_id')) {
+    await db.execAsync('ALTER TABLE book_categories ADD COLUMN server_id TEXT');
+  }
+  await db.execAsync('CREATE UNIQUE INDEX IF NOT EXISTS idx_book_categories_server_id ON book_categories(server_id)');
+}
+
 export async function initDatabase(db: SQLiteDatabase): Promise<void> {
   await db.execAsync('PRAGMA foreign_keys = ON;');
 
@@ -154,6 +177,10 @@ export async function initDatabase(db: SQLiteDatabase): Promise<void> {
 
   if (currentVersion < 2) {
     await migrateV2(db);
+  }
+
+  if (currentVersion < 3) {
+    await migrateV3(db);
   }
 
   if (currentVersion < CURRENT_SCHEMA_VERSION) {
