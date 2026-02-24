@@ -1,11 +1,15 @@
-import React, { useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, View, Text, ScrollView, Alert, Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
 import { useBooks } from '@/src/hooks/useBooks';
+import { useAuth } from '@/src/context/AuthContext';
+import { deleteAllUserData } from '@/src/services/syncService';
 import { BookSpine } from '@/src/components/bookshelf/BookSpine';
 import { NewBookButton } from '@/src/components/bookshelf/NewBookButton';
 import type { Book } from '@/src/db/types';
@@ -16,7 +20,49 @@ let hasAutoOpened = false;
 export default function BookshelfScreen() {
   const { books, loading, refresh, remove, getLastOpenBookId, setLastOpenBookId } =
     useBooks();
+  const { signOut } = useAuth();
+  const db = useSQLiteContext();
   const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all data. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'This cannot be undone. All books, transactions, and settings will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      setDeleting(true);
+                      await deleteAllUserData(db);
+                      await signOut();
+                    } catch (error) {
+                      console.error('Failed to delete account:', error);
+                      Alert.alert('Error', 'Failed to delete account. Please try again.');
+                    } finally {
+                      setDeleting(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -85,7 +131,36 @@ export default function BookshelfScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.header}>In The Black</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>In The Black</Text>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+            style={styles.headerButton}
+            hitSlop={12}
+            testID="delete-account-button"
+          >
+            <FontAwesome name="user-times" size={16} color="#9C8B7A" />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Sign Out',
+                  style: 'destructive',
+                  onPress: () => signOut(),
+                },
+              ]);
+            }}
+            style={styles.headerButton}
+            hitSlop={12}
+          >
+            <FontAwesome name="sign-out" size={18} color="#9C8B7A" />
+          </Pressable>
+        </View>
+      </View>
       <Text style={styles.subtitle}>YOUR LEDGER BOOKS</Text>
       <ScrollView
         contentContainerStyle={styles.shelfContent}
@@ -120,12 +195,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#3C2415',
   },
-  header: {
-    ...Typography.h1,
-    color: '#F5F0E8',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
+  },
+  header: {
+    ...Typography.h1,
+    color: '#F5F0E8',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerButton: {
+    padding: 8,
   },
   subtitle: {
     ...Typography.small,

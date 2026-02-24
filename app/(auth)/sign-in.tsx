@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, Alert, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
@@ -9,9 +8,7 @@ import { GradientButton } from '@/src/components/ui/GradientButton';
 import { useAuth } from '@/src/context/AuthContext';
 
 export default function SignInScreen() {
-  const router = useRouter();
-  const { signInWithPhone, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
-  const [phone, setPhone] = useState('');
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,22 +21,6 @@ export default function SignInScreen() {
       AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
     }
   }, []);
-
-  const handleSendCode = async () => {
-    if (!phone.trim()) {
-      Alert.alert('Missing Phone', 'Please enter your phone number.');
-      return;
-    }
-    setLoading(true);
-    try {
-      await signInWithPhone(phone.trim());
-      router.push({ pathname: '/(auth)/verify-otp', params: { phone: phone.trim() } });
-    } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'Failed to send code.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEmailAuth = async () => {
     if (!email.trim() || !password.trim()) {
@@ -98,40 +79,6 @@ export default function SignInScreen() {
 
         {!showEmail ? (
           <>
-            <View style={styles.formSection}>
-              <Text style={styles.inputLabel}>PHONE NUMBER</Text>
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+1 (555) 123-4567"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                testID="phone-input"
-              />
-              <GradientButton
-                title="Send Code"
-                onPress={handleSendCode}
-                disabled={loading}
-                style={styles.submitButton}
-              />
-            </View>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <GradientButton
-              title="Continue with Google"
-              onPress={handleGoogle}
-              colors={['#4285F4', '#4285F4']}
-              disabled={loading}
-              style={styles.socialButton}
-            />
-
             {appleAvailable && (
               <GradientButton
                 title="Continue with Apple"
@@ -141,6 +88,14 @@ export default function SignInScreen() {
                 style={styles.socialButton}
               />
             )}
+
+            <GradientButton
+              title="Continue with Google"
+              onPress={handleGoogle}
+              colors={['#4285F4', '#4285F4']}
+              disabled={loading}
+              style={styles.socialButton}
+            />
 
             <Pressable onPress={() => setShowEmail(true)} style={styles.toggleRow}>
               <Text style={styles.toggleText}>Use email instead</Text>
@@ -184,8 +139,32 @@ export default function SignInScreen() {
               </Pressable>
             </View>
 
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {appleAvailable && (
+              <GradientButton
+                title="Continue with Apple"
+                onPress={handleApple}
+                colors={['#1A1A1A', '#1A1A1A']}
+                disabled={loading}
+                style={styles.socialButton}
+              />
+            )}
+
+            <GradientButton
+              title="Continue with Google"
+              onPress={handleGoogle}
+              colors={['#4285F4', '#4285F4']}
+              disabled={loading}
+              style={styles.socialButton}
+            />
+
             <Pressable onPress={() => setShowEmail(false)} style={styles.toggleRow}>
-              <Text style={styles.toggleText}>Use phone instead</Text>
+              <Text style={styles.toggleText}>Back</Text>
             </Pressable>
           </>
         )}

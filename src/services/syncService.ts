@@ -203,6 +203,20 @@ export async function pushSettings(
   );
 }
 
+// ─── Delete account (cloud + local) ────────────────────────────────
+
+export async function deleteAllUserData(db: SQLiteDatabase): Promise<void> {
+  // Delete cloud data + auth account via server function
+  const { error } = await supabase.rpc('delete_user_account');
+  if (error) throw error;
+
+  // Clear local SQLite
+  await db.execAsync('DELETE FROM transactions');
+  await db.execAsync('DELETE FROM book_categories');
+  await db.execAsync('DELETE FROM books');
+  await db.execAsync('DELETE FROM app_settings');
+}
+
 // ─── Pull functions (cloud → local) ────────────────────────────────
 
 export async function pullAllData(
@@ -418,6 +432,17 @@ export async function pushAllLocal(
   db: SQLiteDatabase,
   userId: string
 ): Promise<void> {
+  // Clear any existing cloud data for this user to prevent duplicates
+  await supabase.from('transactions').delete().eq('user_id', userId);
+  await supabase.from('book_categories').delete().eq('user_id', userId);
+  await supabase.from('books').delete().eq('user_id', userId);
+  await supabase.from('app_settings').delete().eq('user_id', userId);
+
+  // Reset all local server_ids since we wiped cloud
+  await db.execAsync('UPDATE books SET server_id = NULL');
+  await db.execAsync('UPDATE transactions SET server_id = NULL');
+  await db.execAsync('UPDATE book_categories SET server_id = NULL');
+
   // Push all books
   const books = await db.getAllAsync<{ id: number }>(
     'SELECT id FROM books'
