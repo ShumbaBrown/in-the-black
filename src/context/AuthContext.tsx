@@ -93,22 +93,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithApple = async () => {
-    const nonce = await Crypto.digestStringAsync(
+    const rawNonce = Crypto.getRandomBytes(32)
+      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '');
+    const hashedNonce = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      Crypto.getRandomBytes(32).toString()
+      rawNonce
     );
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
         AppleAuthentication.AppleAuthenticationScope.EMAIL,
       ],
-      nonce,
+      nonce: hashedNonce,
     });
     if (credential.identityToken) {
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
-        nonce,
+        nonce: rawNonce,
       });
       if (error) throw error;
     }
