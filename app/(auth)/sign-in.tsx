@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, Alert, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
@@ -14,6 +15,7 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
 
   React.useEffect(() => {
@@ -117,15 +119,29 @@ export default function SignInScreen() {
                 testID="email-input"
               />
               <Text style={styles.inputLabel}>PASSWORD</Text>
-              <TextInput
-                style={styles.textInput}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Min. 6 characters"
-                placeholderTextColor={Colors.textMuted}
-                secureTextEntry
-                testID="password-input"
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Min. 6 characters"
+                  placeholderTextColor={Colors.textMuted}
+                  secureTextEntry={!showPassword}
+                  testID="password-input"
+                />
+                <Pressable
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                  hitSlop={8}
+                  testID="toggle-password-visibility"
+                >
+                  <FontAwesome
+                    name={showPassword ? 'eye-slash' : 'eye'}
+                    size={18}
+                    color={Colors.textMuted}
+                  />
+                </Pressable>
+              </View>
               <GradientButton
                 title={isSignUp ? 'Create Account' : 'Sign In'}
                 onPress={handleEmailAuth}
@@ -216,6 +232,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: Colors.borderHeavy,
     marginBottom: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.borderHeavy,
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    ...Typography.body,
+    color: Colors.textPrimary,
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
   },
   submitButton: {
     marginTop: 4,
