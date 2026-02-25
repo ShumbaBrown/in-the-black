@@ -43,7 +43,15 @@ export default function SignInScreen() {
         await signInWithEmail(email.trim(), password);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'Authentication failed.');
+      const msg = error.message ?? '';
+      if (!isSignUp && msg.includes('Invalid login credentials')) {
+        Alert.alert(
+          'Sign-In Failed',
+          'No account found with these credentials. Check your email and password, or sign up for a new account.'
+        );
+      } else {
+        Alert.alert('Error', msg || 'Authentication failed.');
+      }
     } finally {
       setLoading(false);
     }
