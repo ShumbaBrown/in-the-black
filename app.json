@@ -40,7 +40,11 @@
       "expo-sqlite",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      ["@sentry/react-native/expo", {
+        "organization": "shumba-labs",
+        "project": "in-the-black"
+      }]
     ],
     "experiments": {
       "typedRoutes": true

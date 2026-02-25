@@ -1,16 +1,27 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useCallback } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 import { initDatabase } from '@/src/db/schema';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { pullAllData, pullIncremental } from '@/src/services/syncService';
+import { captureSyncError } from '@/src/utils/captureSync';
 import 'react-native-reanimated';
+
+const reactNavigationIntegration = Sentry.reactNavigationIntegration();
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: !__DEV__,
+  tracesSampleRate: 1.0,
+  integrations: [reactNavigationIntegration],
+});
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -49,9 +60,7 @@ function SyncOnAuth() {
   useEffect(() => {
     if (user && !hasSynced.current) {
       hasSynced.current = true;
-      pullAllData(db, user.id).catch((e) =>
-        console.warn('Initial sync failed:', e)
-      );
+      pullAllData(db, user.id).catch(captureSyncError('pullAllData'));
     }
     if (!user) {
       hasSynced.current = false;
@@ -62,9 +71,7 @@ function SyncOnAuth() {
   const handleAppStateChange = useCallback(
     (state: AppStateStatus) => {
       if (state === 'active' && user) {
-        pullIncremental(db, user.id).catch((e) =>
-          console.warn('Incremental sync failed:', e)
-        );
+        pullIncremental(db, user.id).catch(captureSyncError('pullIncremental'));
       }
     },
     [user, db]
@@ -78,7 +85,15 @@ function SyncOnAuth() {
   return null;
 }
 
-export default function RootLayout() {
+function RootLayout() {
+  const navigationRef = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (navigationRef) {
+      reactNavigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
+
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'IBMPlexMono-Regular': require('../assets/fonts/IBMPlexMono-Regular.ttf'),
@@ -124,3 +139,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

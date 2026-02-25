@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as Sentry from '@sentry/react-native';
 import type { Book } from '../db/types';
 import type { Category } from '../constants/categories';
 import * as booksDb from '../db/books';
 import { useAuth } from '../context/AuthContext';
 import * as sync from '../services/syncService';
+import { captureSyncError } from '../utils/captureSync';
 
 export function useBooks() {
   const db = useSQLiteContext();
@@ -18,6 +20,7 @@ export function useBooks() {
       setBooks(data);
     } catch (error) {
       console.error('Failed to fetch books:', error);
+      Sentry.captureException(error);
     } finally {
       setLoading(false);
     }
@@ -47,14 +50,10 @@ export function useBooks() {
 
       // Sync: push book + its categories
       if (user) {
-        sync.pushBook(db, user.id, id).catch((e) =>
-          console.warn('Sync pushBook failed:', e)
-        );
+        sync.pushBook(db, user.id, id).catch(captureSyncError('pushBook'));
         const cats = await booksDb.getRawBookCategories(db, id);
         for (const cat of cats) {
-          sync.pushCategory(db, user.id, cat.id).catch((e) =>
-            console.warn('Sync pushCategory failed:', e)
-          );
+          sync.pushCategory(db, user.id, cat.id).catch(captureSyncError('pushCategory'));
         }
       }
 
@@ -73,9 +72,7 @@ export function useBooks() {
       await refresh();
 
       if (user && serverId) {
-        sync.pushDeleteBook(serverId).catch((e) =>
-          console.warn('Sync pushDeleteBook failed:', e)
-        );
+        sync.pushDeleteBook(serverId).catch(captureSyncError('pushDeleteBook'));
       }
     },
     [db, refresh, user]
@@ -93,7 +90,7 @@ export function useBooks() {
         const book = await booksDb.getBookById(db, bookId);
         if (book?.server_id) {
           sync.pushSettings(user.id, 'last_open_book_id', book.server_id).catch(
-            (e) => console.warn('Sync pushSettings failed:', e)
+            captureSyncError('pushSettings')
           );
         }
       }

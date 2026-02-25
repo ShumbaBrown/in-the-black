@@ -4,6 +4,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -31,12 +32,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
+      if (s?.user) {
+        Sentry.setUser({ id: s.user.id, email: s.user.email });
+      }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, s) => {
         setSession(s);
+        if (s?.user) {
+          Sentry.setUser({ id: s.user.id, email: s.user.email });
+        } else {
+          Sentry.setUser(null);
+        }
       }
     );
 

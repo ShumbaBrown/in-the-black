@@ -12,6 +12,7 @@ import type { Book, BookCategory } from '../db/types';
 import type { Category, CategoryType } from '../constants/categories';
 import { useAuth } from './AuthContext';
 import * as sync from '../services/syncService';
+import { captureSyncError } from '../utils/captureSync';
 
 interface BookContextValue {
   book: Book;
@@ -85,9 +86,7 @@ export function BookProvider({ bookId, children }: BookProviderProps) {
         const raw = await getRawBookCategories(db, bookId);
         const newCat = raw.find((c) => c.category_id === categoryId);
         if (newCat) {
-          sync.pushCategory(db, user.id, newCat.id).catch((e) =>
-            console.warn('Sync pushCategory failed:', e)
-          );
+          sync.pushCategory(db, user.id, newCat.id).catch(captureSyncError('pushCategory'));
         }
       }
 
@@ -102,9 +101,7 @@ export function BookProvider({ bookId, children }: BookProviderProps) {
       await refreshCategories();
 
       if (user) {
-        sync.pushCategory(db, user.id, bookCategoryId).catch((e) =>
-          console.warn('Sync pushCategory failed:', e)
-        );
+        sync.pushCategory(db, user.id, bookCategoryId).catch(captureSyncError('pushCategory'));
       }
     },
     [db, refreshCategories, user]
@@ -123,9 +120,7 @@ export function BookProvider({ bookId, children }: BookProviderProps) {
       await refreshCategories();
 
       if (user && serverId) {
-        sync.pushDeleteCategory(serverId).catch((e) =>
-          console.warn('Sync pushDeleteCategory failed:', e)
-        );
+        sync.pushDeleteCategory(serverId).catch(captureSyncError('pushDeleteCategory'));
       }
     },
     [db, refreshCategories, user]

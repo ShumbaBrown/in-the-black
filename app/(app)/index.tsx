@@ -7,6 +7,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/src/constants/colors';
 import { Typography } from '@/src/constants/typography';
+import * as Sentry from '@sentry/react-native';
 import { useBooks } from '@/src/hooks/useBooks';
 import { useAuth } from '@/src/context/AuthContext';
 import { deleteAllUserData } from '@/src/services/syncService';
@@ -50,6 +51,7 @@ export default function BookshelfScreen() {
                       await signOut();
                     } catch (error) {
                       console.error('Failed to delete account:', error);
+                      Sentry.captureException(error);
                       Alert.alert('Error', 'Failed to delete account. Please try again.');
                     } finally {
                       setDeleting(false);

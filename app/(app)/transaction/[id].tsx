@@ -13,6 +13,7 @@ import { getTransactionById, updateTransaction, deleteTransaction } from '@/src/
 import type { Transaction, NewTransaction } from '@/src/db/types';
 import { useAuth } from '@/src/context/AuthContext';
 import * as sync from '@/src/services/syncService';
+import { captureSyncError } from '@/src/utils/captureSync';
 
 function EditTransactionContent({ transaction }: { transaction: Transaction }) {
   const router = useRouter();
@@ -24,9 +25,7 @@ function EditTransactionContent({ transaction }: { transaction: Transaction }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     if (user) {
-      sync.pushTransaction(db, user.id, transaction.id).catch((e) =>
-        console.warn('Sync pushTransaction failed:', e)
-      );
+      sync.pushTransaction(db, user.id, transaction.id).catch(captureSyncError('pushTransaction'));
     }
 
     router.back();
@@ -38,9 +37,7 @@ function EditTransactionContent({ transaction }: { transaction: Transaction }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     if (user && serverId) {
-      sync.pushDeleteTransaction(serverId).catch((e) =>
-        console.warn('Sync pushDeleteTransaction failed:', e)
-      );
+      sync.pushDeleteTransaction(serverId).catch(captureSyncError('pushDeleteTransaction'));
     }
 
     router.back();

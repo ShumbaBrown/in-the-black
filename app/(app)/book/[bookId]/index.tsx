@@ -17,6 +17,7 @@ import { deleteTransaction, getTransactionById } from '@/src/db/transactions';
 import type { Transaction } from '@/src/db/types';
 import { useAuth } from '@/src/context/AuthContext';
 import * as sync from '@/src/services/syncService';
+import { captureSyncError } from '@/src/utils/captureSync';
 
 export default function DashboardScreen() {
   const { book } = useBook();
@@ -45,9 +46,7 @@ export default function DashboardScreen() {
     refresh();
 
     if (user && serverId) {
-      sync.pushDeleteTransaction(serverId).catch((e) =>
-        console.warn('Sync pushDeleteTransaction failed:', e)
-      );
+      sync.pushDeleteTransaction(serverId).catch(captureSyncError('pushDeleteTransaction'));
     }
   };
 

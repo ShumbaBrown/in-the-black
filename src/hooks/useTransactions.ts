@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as Sentry from '@sentry/react-native';
 import type { Transaction, NewTransaction } from '../db/types';
 import { useBook } from '../context/BookContext';
 import { useAuth } from '../context/AuthContext';
 import * as db from '../db/transactions';
 import * as sync from '../services/syncService';
+import { captureSyncError } from '../utils/captureSync';
 
 export function useTransactions(filter?: 'expense' | 'income') {
   const sqlite = useSQLiteContext();
@@ -19,6 +21,7 @@ export function useTransactions(filter?: 'expense' | 'income') {
       setTransactions(data);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
+      Sentry.captureException(error);
     } finally {
       setLoading(false);
     }
@@ -34,9 +37,7 @@ export function useTransactions(filter?: 'expense' | 'income') {
       await refresh();
 
       if (user) {
-        sync.pushTransaction(sqlite, user.id, id).catch((e) =>
-          console.warn('Sync pushTransaction failed:', e)
-        );
+        sync.pushTransaction(sqlite, user.id, id).catch(captureSyncError('pushTransaction'));
       }
 
       return id;
@@ -50,9 +51,7 @@ export function useTransactions(filter?: 'expense' | 'income') {
       await refresh();
 
       if (user) {
-        sync.pushTransaction(sqlite, user.id, id).catch((e) =>
-          console.warn('Sync pushTransaction failed:', e)
-        );
+        sync.pushTransaction(sqlite, user.id, id).catch(captureSyncError('pushTransaction'));
       }
     },
     [sqlite, refresh, user]
@@ -68,9 +67,7 @@ export function useTransactions(filter?: 'expense' | 'income') {
       await refresh();
 
       if (user && serverId) {
-        sync.pushDeleteTransaction(serverId).catch((e) =>
-          console.warn('Sync pushDeleteTransaction failed:', e)
-        );
+        sync.pushDeleteTransaction(serverId).catch(captureSyncError('pushDeleteTransaction'));
       }
     },
     [sqlite, refresh, user]

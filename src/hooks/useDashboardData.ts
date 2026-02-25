@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as Sentry from '@sentry/react-native';
 import type { Transaction } from '../db/types';
 import { useBook } from '../context/BookContext';
 import * as db from '../db/transactions';
@@ -40,6 +41,7 @@ export function useDashboardData(filter?: 'expense' | 'income') {
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
+      Sentry.captureException(error);
       setData((prev) => ({ ...prev, loading: false }));
     }
   }, [sqlite, bookId, filter]);
